@@ -3,8 +3,6 @@ import { Box, Flex, Text, HStack, VStack, Button, Badge, Table, Thead, Tbody, Tr
 import { createChart, IChartApi, CandlestickData, Time, CandlestickSeries } from 'lightweight-charts'
 import { useFundingStore } from './store/fundingStore'
 
-const COINS = ['ZEC', 'BTC', 'ETH'] as const
-type Coin = typeof COINS[number]
 const SIZE_FILTERS = [
   { label: '$10K+', value: 10_000 },
   { label: '$50K+', value: 50_000 },
@@ -138,15 +136,14 @@ const PriceMiniChart = ({ symbol }: { symbol: string }) => {
 }
 
 function App() {
-  const [coin, setCoin] = useState<Coin>('ZEC')
-  const [minSize, setMinSize] = useState(10_000)
+  const [minSize, setMinSize] = useState(50_000)
   const [trades, setTrades] = useState<Trade[]>([])
   const tradeBufferRef = useRef<Trade[]>([])
   const wsRef = useRef<WebSocket | null>(null)
   const flushIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const rawRates = useFundingStore(s => s.rawRates)
-  const funding = (rawRates[coin] || 0) * 100
+  const funding = (rawRates['BTC'] || 0) * 100
   const fundingColor = funding > 0.1 ? '#FF453A' : funding < -0.05 ? '#10A37F' : '#6e6e73'
 
   // Stats
@@ -185,7 +182,7 @@ function App() {
 
     const connect = () => {
       if (wsRef.current) wsRef.current.close()
-      const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${coin.toLowerCase()}usdt@aggTrade`)
+      const ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@aggTrade')
       wsRef.current = ws
 
       ws.onmessage = (event) => {
@@ -210,7 +207,7 @@ function App() {
     // Load recent history
     const loadHistory = async () => {
       try {
-        const resp = await fetch(`https://api.binance.com/api/v3/aggTrades?symbol=${coin}USDT&limit=200`)
+        const resp = await fetch('https://api.binance.com/api/v3/aggTrades?symbol=BTCUSDT&limit=200')
         const data = await resp.json()
         const histTrades: Trade[] = data
           .filter((t: any) => parseFloat(t.q) * parseFloat(t.p) >= minSize)
@@ -233,7 +230,7 @@ function App() {
       if (wsRef.current) wsRef.current.close()
       if (flushIntervalRef.current) clearInterval(flushIntervalRef.current)
     }
-  }, [coin, minSize])
+  }, [minSize])
 
   return (
     <Box minH="100vh" bg="#0B1418" p={3} display="flex" flexDirection="column" gap={3} fontFamily="mono">
@@ -279,27 +276,10 @@ function App() {
 
       {/* Controls row */}
       <Flex bg="#141E24" border="1px solid #2a3840" borderRadius="8px" px={4} py={3} gap={4} align="center" flexWrap="wrap">
-        {/* Coin selector */}
-        <HStack spacing={1}>
-          {COINS.map(c => (
-            <Button
-              key={c}
-              size="sm"
-              bg={coin === c ? '#10A37F' : 'transparent'}
-              color={coin === c ? '#0B1418' : '#6e6e73'}
-              fontWeight="800"
-              fontSize="12px"
-              fontFamily="mono"
-              px={4}
-              borderRadius="6px"
-              border="1px solid"
-              borderColor={coin === c ? '#10A37F' : '#2a3840'}
-              _hover={{ bg: coin === c ? '#0D8B6A' : '#1a2830', borderColor: '#10A37F' }}
-              onClick={() => setCoin(c)}
-            >
-              {c}
-            </Button>
-          ))}
+        <HStack spacing={2}>
+          <Box w="7px" h="7px" borderRadius="50%" bg="#FF9F0A" boxShadow="0 0 6px rgba(255,159,10,0.5)" />
+          <Text fontSize="11px" color="#FF9F0A" fontWeight="800" fontFamily="mono">BTC/USDT</Text>
+          <Text fontSize="10px" color="#3a4550" fontFamily="mono">Binance spot</Text>
         </HStack>
 
         {/* Min size filter */}
@@ -336,7 +316,7 @@ function App() {
         <Box flex="1" minW={0} display="flex" flexDirection="column" bg="#141E24" border="1px solid #2a3840" borderRadius="8px" overflow="hidden">
           <Flex px={4} py={3} borderBottom="1px solid #2a3840" justify="space-between" align="center">
             <HStack spacing={3}>
-              <Text fontSize="14px" fontWeight="800" color="#f5f5f7" letterSpacing="0.05em">{coin}/USDT</Text>
+              <Text fontSize="14px" fontWeight="800" color="#f5f5f7" letterSpacing="0.05em">BTC/USDT</Text>
               <Text fontSize="13px" color={priceColor} fontFamily="mono" fontWeight="700">
                 ${formatPrice(lastPrice)}
               </Text>
@@ -406,10 +386,10 @@ function App() {
           <Box flex="1" bg="#141E24" border="1px solid #2a3840" borderRadius="8px" overflow="hidden" minH="200px">
             <Flex px={4} py={2} borderBottom="1px solid #2a3840" justify="space-between" align="center">
               <Text fontSize="10px" color="#3a4550" fontWeight="600" letterSpacing="0.1em">1M CHART</Text>
-              <Text fontSize="10px" color="#6e6e73" fontFamily="mono">{coin}/USDT</Text>
+              <Text fontSize="10px" color="#6e6e73" fontFamily="mono">BTC/USDT</Text>
             </Flex>
             <Box h="calc(100% - 40px)">
-              <PriceMiniChart symbol={coin} />
+              <PriceMiniChart symbol="BTC" />
             </Box>
           </Box>
 
