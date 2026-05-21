@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "apis": [
+    {
+      "identifier": "fundingrates",
+      "source": "https://apibetadocs.lighter.xyz/openapi/66478b1a41f7300010f8aac2",
+      "integrity": "sha512-zsvsd5qBCZ1Easaa+xhebEmWNqvVdASwNjJqlMV/l/he6KVq/sLGd4qNHzue2hEBcxiYgM+xHysIj+utqrl+5w==",
+      "installerVersion": "6.1.3"
+    }
+  ]
+}

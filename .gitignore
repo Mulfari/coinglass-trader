@@ -1,0 +1,27 @@
+# Local Netlify folder
+.netlify
+node_modules
+
+#api
+/src/api/
+
+#dist
+/dist
+
+# binance csv
+/binance.csv
+
+# liq data
+liqData.js
+
+
+# netlify toml
+netlify.toml
+
+# ,-------- VSCode ---------,
+.vscode
+
+# vite-env.d.ts
+.vite-env.d.ts
+
+/node_modules/
