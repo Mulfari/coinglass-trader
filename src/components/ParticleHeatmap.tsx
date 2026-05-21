@@ -63,11 +63,11 @@ export const ParticleHeatmap = React.memo(({ liquidations: incomingLiquidations 
     resize();
 
     // Mapping states
-    const PAPER_HEX = '#FAF9F6';
-    const INK_HEX = '#121212';
-    const GREEN_HEX = '#417D59'; // brand.mutedGreen
-    const RED_HEX = '#A64D4D'; // brand.mutedRed
-    const TURQUOISE_HEX = '#1A6B74'; // brand.turquoise
+    const PAPER_HEX = '#0B1418';
+    const INK_HEX = '#f5f5f7';
+    const GREEN_HEX = '#10A37F';
+    const RED_HEX = '#FF453A';
+    const TURQUOISE_HEX = '#10A37F';
 
     // We keep a history of "scanned" area to leave trails, 
     // by constantly clearing with a high-opacity paper fill

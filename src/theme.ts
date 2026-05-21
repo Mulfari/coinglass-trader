@@ -1,25 +1,23 @@
 import { extendTheme, type ThemeConfig } from '@chakra-ui/react'
 
 const config: ThemeConfig = {
-  initialColorMode: 'light',
+  initialColorMode: 'dark',
   useSystemColorMode: false,
 }
 
 const colors = {
   brand: {
-    paper: '#FAF9F6', // Pure high-quality technical paper
-    ink: '#121212',   // Deep black ink
-    mutedInk: '#666666',
-    turquoise: '#1A6B74',
-    softGreen: '#EDF5F0',
-    mutedGreen: '#417D59',
-    softRed: '#F5EDED',
-    mutedRed: '#A64D4D',
-    border: '#EBEBEB', 
+    paper: '#0B1418',
+    ink: '#f5f5f7',
+    mutedInk: '#6e6e73',
+    turquoise: '#10A37F',
+    mutedGreen: '#10A37F',
+    mutedRed: '#FF453A',
+    border: '#383838',
   },
 }
 
-const theme = extendTheme({ 
+const theme = extendTheme({
   config,
   fonts: {
     heading: '"Inter", sans-serif',
@@ -27,12 +25,20 @@ const theme = extendTheme({
     mono: '"JetBrains Mono", monospace',
   },
   colors,
+  semanticTokens: {
+    colors: {
+      'brand.softGreen': {
+        default: 'rgba(16,163,127,0.12)',
+        _dark: 'rgba(16,163,127,0.12)',
+      },
+      'brand.softRed': {
+        default: 'rgba(255,69,58,0.12)',
+        _dark: 'rgba(255,69,58,0.12)',
+      },
+    },
+  },
   styles: {
     global: {
-      '@keyframes pulseGlow': {
-        '0%': { opacity: 0.01 },
-        '100%': { opacity: 0.05 },
-      },
       body: {
         bg: 'brand.paper',
         color: 'brand.ink',
@@ -55,12 +61,12 @@ const theme = extendTheme({
           borderColor: 'brand.border',
           bg: 'transparent',
           _hover: {
-            bg: 'rgba(0,0,0,0.02)',
+            bg: 'rgba(255,255,255,0.05)',
           }
         },
         ghost: {
           _hover: {
-            bg: 'rgba(0,0,0,0.02)',
+            bg: 'rgba(255,255,255,0.05)',
           }
         }
       }
@@ -113,4 +119,4 @@ const theme = extendTheme({
   }
 })
 
-export { theme } 
+export { theme }

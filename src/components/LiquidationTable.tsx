@@ -106,7 +106,7 @@ export const LiquidationTable: React.FC<Props> = React.memo(({ soundEnabled, min
         css={{
           '&::-webkit-scrollbar': { width: '2px' },
           '&::-webkit-scrollbar-track': { background: 'transparent' },
-          '&::-webkit-scrollbar-thumb': { background: 'rgba(0,0,0,0.05)' },
+          '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.08)' },
         }}
       >
         <Table variant="simple" size="xs" width="100%" style={{ tableLayout: 'fixed' }}>

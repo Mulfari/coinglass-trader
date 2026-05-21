@@ -91,7 +91,7 @@ export const LiquidationClusters: React.FC<Props> = React.memo(({ minAmount, liq
         css={{
           '&::-webkit-scrollbar': { width: '2px' },
           '&::-webkit-scrollbar-track': { background: 'transparent' },
-          '&::-webkit-scrollbar-thumb': { background: 'rgba(0,0,0,0.1)' },
+          '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.08)' },
         }}
       >
         <VStack align="stretch" spacing={4}>

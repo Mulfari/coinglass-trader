@@ -1,8 +1,8 @@
-/* Technical "Paper & Ink" foundation */
+/* Dark terminal theme */
 :root {
-  --paper: #FAF9F6;
-  --ink: #121212;
-  --border: #EBEBEB;
+  --paper: #0B1418;
+  --ink: #f5f5f7;
+  --border: #383838;
 }
 
 * {
@@ -19,23 +19,20 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Technical Mono for Data */
 .mono {
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* Remove all rounded corners */
-.chakra-button, 
-.chakra-card, 
-.chakra-badge, 
-.chakra-menu__menu-list, 
+.chakra-button,
+.chakra-card,
+.chakra-badge,
+.chakra-menu__menu-list,
 .chakra-menu__menu-item,
 .chakra-tag,
 .chakra-switch__track {
   border-radius: 0 !important;
 }
 
-/* Professional Scrollbar */
 ::-webkit-scrollbar {
   width: 2px;
   height: 2px;
@@ -46,19 +43,17 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.2);
 }
 
-/* Table refinements */
 table {
   border-collapse: collapse;
 }
 
-/* Subtle Hover */
 .technical-row:hover {
-  background-color: rgba(0, 0, 0, 0.01);
+  background-color: rgba(255, 255, 255, 0.02);
 }
