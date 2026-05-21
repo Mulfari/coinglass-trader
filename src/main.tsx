@@ -1,14 +1,16 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { ColorModeScript, ChakraProvider } from '@chakra-ui/react'
+import { ChakraProvider } from '@chakra-ui/react'
 import { theme } from './theme'
+import { WebSocketProvider } from './providers/WebSocketProvider'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ColorModeScript initialColorMode={theme.config.initialColorMode} />
     <ChakraProvider theme={theme}>
-      <App />
+      <WebSocketProvider exchanges={['BINANCE', 'BYBIT', 'OKX']}>
+        <App />
+      </WebSocketProvider>
     </ChakraProvider>
   </React.StrictMode>
 );

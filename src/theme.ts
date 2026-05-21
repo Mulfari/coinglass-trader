@@ -7,13 +7,19 @@ const config: ThemeConfig = {
 
 const colors = {
   brand: {
-    paper: '#0B1418',
-    ink: '#f5f5f7',
-    mutedInk: '#6e6e73',
-    turquoise: '#10A37F',
-    mutedGreen: '#10A37F',
-    mutedRed: '#FF453A',
-    border: '#383838',
+    bg: '#0B1418',
+    surface: '#141E24',
+    surfaceHover: '#1a2830',
+    border: '#2a3840',
+    text: '#f5f5f7',
+    textMuted: '#6e6e73',
+    textDim: '#3a4550',
+    green: '#10A37F',
+    greenDim: 'rgba(16,163,127,0.15)',
+    red: '#FF453A',
+    redDim: 'rgba(255,69,58,0.15)',
+    yellow: '#FF9F0A',
+    blue: '#0A84FF',
   },
 }
 
@@ -25,98 +31,25 @@ const theme = extendTheme({
     mono: '"JetBrains Mono", monospace',
   },
   colors,
-  semanticTokens: {
-    colors: {
-      'brand.softGreen': {
-        default: 'rgba(16,163,127,0.12)',
-        _dark: 'rgba(16,163,127,0.12)',
-      },
-      'brand.softRed': {
-        default: 'rgba(255,69,58,0.12)',
-        _dark: 'rgba(255,69,58,0.12)',
-      },
-    },
-  },
   styles: {
     global: {
       body: {
-        bg: 'brand.paper',
-        color: 'brand.ink',
+        bg: 'brand.bg',
+        color: 'brand.text',
         fontSize: '13px',
       },
-      '*': {
-        borderColor: 'brand.border !important',
-      }
     },
   },
   components: {
     Button: {
       baseStyle: {
-        borderRadius: '0',
-        fontWeight: '500',
+        borderRadius: '4px',
+        fontWeight: '600',
         fontSize: '11px',
+        letterSpacing: '0.05em',
       },
-      variants: {
-        outline: {
-          borderColor: 'brand.border',
-          bg: 'transparent',
-          _hover: {
-            bg: 'rgba(255,255,255,0.05)',
-          }
-        },
-        ghost: {
-          _hover: {
-            bg: 'rgba(255,255,255,0.05)',
-          }
-        }
-      }
     },
-    Badge: {
-      variants: {
-        premium: {
-          bg: 'transparent',
-          color: 'brand.ink',
-          border: '1px solid',
-          borderColor: 'brand.border',
-          borderRadius: '0',
-          px: 1,
-          py: 0,
-          textTransform: 'uppercase',
-          fontSize: '9px',
-          fontWeight: '700',
-          fontFamily: 'mono',
-        }
-      }
-    },
-    Tag: {
-      variants: {
-        premium: {
-          container: {
-            bg: 'transparent',
-            color: 'brand.mutedInk',
-            border: '1px solid',
-            borderColor: 'brand.border',
-            borderRadius: '0',
-            fontSize: '9px',
-            fontWeight: '700',
-            fontFamily: 'mono',
-          }
-        }
-      }
-    },
-    Card: {
-      variants: {
-        outline: {
-          container: {
-            borderColor: 'brand.border',
-            bg: 'brand.paper',
-            boxShadow: 'none',
-            borderRadius: '0',
-          }
-        }
-      }
-    }
-  }
+  },
 })
 
 export { theme }
