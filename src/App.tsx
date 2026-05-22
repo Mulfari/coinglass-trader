@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Box, Flex, Text, HStack, VStack, Button, Badge, Table, Thead, Tbody, Tr, Td, Th } from '@chakra-ui/react'
+import { Box, Flex, Text, HStack, VStack, Button } from '@chakra-ui/react'
 import { createChart, IChartApi, CandlestickData, Time, CandlestickSeries } from 'lightweight-charts'
 import { useFundingStore } from './store/fundingStore'
 
@@ -10,7 +10,6 @@ const SIZE_FILTERS = [
   { label: '$500K+', value: 500_000 },
   { label: '$1M+', value: 1_000_000 },
 ]
-
 
 const formatPrice = (p: number) => p < 1 ? p.toFixed(4) : p < 100 ? p.toFixed(3) : p.toLocaleString(undefined, { maximumFractionDigits: 0 })
 const formatSize = (v: number) => v >= 1e6 ? `${(v / 1e6).toFixed(2)}M` : v >= 1e3 ? `${(v / 1e3).toFixed(0)}K` : `${v}`
@@ -34,41 +33,77 @@ const candleOpts = {
   wickUpColor: '#10A37F', wickDownColor: '#FF453A',
 }
 
-// Trade row component
-const TradeRow = ({ trade }: { trade: Trade }) => {
-  const isBuy = trade.isBuyerMaker === false
+interface Trade {
+  id: string; timestamp: number; price: number; quantity: number; isBuyerMaker: boolean
+  size: number
+}
+
+interface TradeGroup {
+  key: string
+  label: string
+  trades: Trade[]
+  buyVol: number; sellVol: number; netDelta: number
+}
+
+const MegaTradeRow = ({ trade, isNew }: { trade: Trade; isNew: boolean }) => {
+  const isBuy = !trade.isBuyerMaker
   const color = isBuy ? '#10A37F' : '#FF453A'
-  const sideLabel = isBuy ? 'BUY' : 'SELL'
-  const isLarge = trade.quantity * trade.price >= 100_000
-  const isMega = trade.quantity * trade.price >= 500_000
+  const bgColor = isBuy ? 'rgba(16,163,127,0.12)' : 'rgba(255,69,58,0.12)'
+  const borderColor = isBuy ? 'rgba(16,163,127,0.4)' : 'rgba(255,69,58,0.4)'
+  const value = trade.size
 
   return (
-    <Tr
-      bg={isMega ? (isBuy ? 'rgba(16,163,127,0.15)' : 'rgba(255,69,58,0.15)')
-        : isLarge ? (isBuy ? 'rgba(16,163,127,0.08)' : 'rgba(255,69,58,0.08)')
-        : 'transparent'}
-      _hover={{ bg: '#1a2830' }}
-      transition="background 0.1s"
+    <Box
+      bg={bgColor}
+      border="1px solid"
+      borderColor={borderColor}
+      borderRadius="8px"
+      px={3} py={2}
+      display="flex"
+      alignItems="center"
+      gap={3}
+      position="relative"
+      overflow="hidden"
+      animation={isNew ? 'tradeFlash 0.5s ease-out' : undefined}
+      _before={isNew ? {
+        content: '""',
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: '3px',
+        bg: color,
+      } : undefined}
     >
-      <Td px={2} py={1.5} fontFamily="mono" fontSize="11px" color="#6e6e73">{formatTime(trade.timestamp)}</Td>
-      <Td px={2} py={1.5}>
-        <Badge bg={color} color="#0B1418" fontSize="9px" fontWeight="800" px={1.5} borderRadius="3px">{sideLabel}</Badge>
-      </Td>
-      <Td px={2} py={1.5} isNumeric fontFamily="mono" fontSize="11px" color="#f5f5f7">{formatPrice(trade.price)}</Td>
-      <Td px={2} py={1.5} isNumeric fontFamily="mono" fontSize="11px" fontWeight={isLarge ? '700' : '400'} color={color}>
-        ${formatSize(trade.quantity * trade.price)}
-      </Td>
-      <Td px={2} py={1.5} isNumeric fontFamily="mono" fontSize="11px" color="#f5f5f7">{trade.quantity.toFixed(2)}</Td>
-      <Td px={2} py={1.5} fontFamily="mono" fontSize="10px" color="#3a4550">
-        {isMega ? '★ MEGA' : isLarge ? 'WHALE' : ''}
-      </Td>
-    </Tr>
+      {/* Size bar */}
+      <Box position="absolute" right={0} top={0} bottom={0} bg={color} opacity={0.08} w={`${Math.min(100, value / 15000)}%`} borderRadius="0 8px 8px 0" />
+
+      <VStack align="start" spacing={0} w="60px" flexShrink={0}>
+        <Text fontSize="8px" color={color} fontFamily="mono" fontWeight="700" letterSpacing="0.08em">{isBuy ? 'BUY' : 'SELL'}</Text>
+        <Text fontSize="9px" color="#3a4550" fontFamily="mono">{formatTime(trade.timestamp)}</Text>
+      </VStack>
+
+      <VStack align="start" spacing={0} flex="1" minW={0}>
+        <Text fontSize="16px" fontWeight="900" color="#f5f5f7" fontFamily="mono" letterSpacing="0.02em">
+          ${formatSize(value)}
+        </Text>
+        <Text fontSize="10px" color="#6e6e73" fontFamily="mono">
+          {trade.quantity.toFixed(4)} BTC @ ${formatPrice(trade.price)}
+        </Text>
+      </VStack>
+
+      <VStack align="end" spacing={0} flexShrink={0}>
+        {value >= 1_000_000 ? (
+          <Text fontSize="11px" fontWeight="900" color={color} fontFamily="mono">★ MEGA</Text>
+        ) : (
+          <Text fontSize="11px" fontWeight="700" color={color} fontFamily="mono">WHALE</Text>
+        )}
+        <Text fontSize="9px" color="#3a4550" fontFamily="mono">${(value / 1e6).toFixed(2)}M</Text>
+      </VStack>
+    </Box>
   )
 }
 
-interface Trade { id: string; timestamp: number; price: number; quantity: number; isBuyerMaker: boolean }
-
-// Mini chart for price
 const PriceMiniChart = ({ symbol }: { symbol: string }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -98,7 +133,7 @@ const PriceMiniChart = ({ symbol }: { symbol: string }) => {
 
     const loadHistory = async () => {
       try {
-        const resp = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=1m&limit=60`)
+        const resp = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=1m&limit=120`)
         const data = await resp.json()
         const candles: CandlestickData[] = data.map((k: any[]) => ({
           time: (k[0] / 1000) as Time,
@@ -135,45 +170,126 @@ const PriceMiniChart = ({ symbol }: { symbol: string }) => {
   return <Box ref={containerRef} flex="1" h="100%" />
 }
 
+// Group trades by minute bucket
+function groupTrades(trades: Trade[]): TradeGroup[] {
+  const now = Date.now()
+  const buckets: Map<string, { label: string; trades: Trade[] }> = new Map()
+
+  for (const t of trades) {
+    const diff = now - t.timestamp
+    let key: string, label: string
+
+    if (diff < 60_000) {
+      key = 'now'
+      label = 'JUST NOW'
+    } else if (diff < 300_000) {
+      const min = Math.floor(diff / 60_000)
+      key = `min${min}`
+      label = `${min}m AGO`
+    } else {
+      const d = new Date(t.timestamp)
+      key = `${d.getHours()}:${d.getMinutes()}`
+      label = formatTime(t.timestamp)
+    }
+
+    if (!buckets.has(key)) buckets.set(key, { label, trades: [] })
+    buckets.get(key)!.trades.push(t)
+  }
+
+  return Array.from(buckets.entries()).map(([key, { label, trades }]) => {
+    const buyVol = trades.filter(t => !t.isBuyerMaker).reduce((s, t) => s + t.size, 0)
+    const sellVol = trades.filter(t => t.isBuyerMaker).reduce((s, t) => s + t.size, 0)
+    return { key, label, trades, buyVol, sellVol, netDelta: buyVol - sellVol }
+  })
+}
+
 function App() {
   const [minSize, setMinSize] = useState(50_000)
   const [trades, setTrades] = useState<Trade[]>([])
+  const [newTradeIds, setNewTradeIds] = useState<Set<string>>(new Set())
+  const [autoScroll, setAutoScroll] = useState(true)
   const tradeBufferRef = useRef<Trade[]>([])
   const wsRef = useRef<WebSocket | null>(null)
   const flushIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   const rawRates = useFundingStore(s => s.rawRates)
   const funding = (rawRates['BTC'] || 0) * 100
   const fundingColor = funding > 0.1 ? '#FF453A' : funding < -0.05 ? '#10A37F' : '#6e6e73'
 
-  // Stats
   const stats = useMemo(() => {
     const now = Date.now()
-    const last5m = trades.filter(t => now - t.timestamp < 5 * 60 * 1000)
-    const buys = last5m.filter(t => !t.isBuyerMaker)
-    const sells = last5m.filter(t => t.isBuyerMaker)
-    const buyVol = buys.reduce((s, t) => s + t.quantity * t.price, 0)
-    const sellVol = sells.reduce((s, t) => s + t.quantity * t.price, 0)
-    const totalVol = buyVol + sellVol
-    const buyPct = totalVol > 0 ? (buyVol / totalVol) * 100 : 50
-    return { buys: buys.length, sells: sells.length, buyVol, sellVol, buyPct, totalVol }
+    const windows = {
+      m1: trades.filter(t => now - t.timestamp < 60_000),
+      m5: trades.filter(t => now - t.timestamp < 5 * 60_000),
+      m15: trades.filter(t => now - t.timestamp < 15 * 60_000),
+    }
+    return {
+      m1: {
+        buys: windows.m1.filter(t => !t.isBuyerMaker).length,
+        sells: windows.m1.filter(t => t.isBuyerMaker).length,
+        buyVol: windows.m1.filter(t => !t.isBuyerMaker).reduce((s, t) => s + t.size, 0),
+        sellVol: windows.m1.filter(t => t.isBuyerMaker).reduce((s, t) => s + t.size, 0),
+        buyPct: 50,
+      },
+      m5: {
+        buys: windows.m5.filter(t => !t.isBuyerMaker).length,
+        sells: windows.m5.filter(t => t.isBuyerMaker).length,
+        buyVol: windows.m5.filter(t => !t.isBuyerMaker).reduce((s, t) => s + t.size, 0),
+        sellVol: windows.m5.filter(t => t.isBuyerMaker).reduce((s, t) => s + t.size, 0),
+        buyPct: 50,
+      },
+      m15: {
+        buys: windows.m15.filter(t => !t.isBuyerMaker).length,
+        sells: windows.m15.filter(t => t.isBuyerMaker).length,
+        buyVol: windows.m15.filter(t => !t.isBuyerMaker).reduce((s, t) => s + t.size, 0),
+        sellVol: windows.m15.filter(t => t.isBuyerMaker).reduce((s, t) => s + t.size, 0),
+        buyPct: 50,
+      },
+    }
   }, [trades])
 
-  // Live price
+  for (const w of ['m1', 'm5', 'm15'] as const) {
+    const tv = stats[w].buyVol + stats[w].sellVol
+    if (tv > 0) stats[w].buyPct = (stats[w].buyVol / tv) * 100
+  }
+
   const lastPrice = trades[0]?.price ?? 0
-  const prevPrice = trades[10]?.price ?? lastPrice
+  const prevPrice = trades[20]?.price ?? lastPrice
   const priceChange = lastPrice - prevPrice
   const priceChangePct = prevPrice > 0 ? (priceChange / prevPrice) * 100 : 0
   const priceColor = priceChange >= 0 ? '#10A37F' : '#FF453A'
 
-  // WebSocket connection
+  const groups = useMemo(() => groupTrades(trades), [trades])
+
+  // Delta timeline
+  const deltaTimeline = useMemo(() => {
+    const now = Date.now()
+    const buckets: { time: number; delta: number }[] = []
+    const windowMs = 60_000
+
+    for (let i = 0; i < 20; i++) {
+      const tStart = now - (i + 1) * windowMs
+      const tEnd = now - i * windowMs
+      const bucketTrades = trades.filter(t => t.timestamp >= tStart && t.timestamp < tEnd)
+      const delta = bucketTrades.reduce((s, t) => s + (t.isBuyerMaker ? -t.size : t.size), 0)
+      buckets.unshift({ time: tEnd, delta })
+    }
+    return buckets
+  }, [trades])
+
+  const maxDelta = useMemo(() => Math.max(...deltaTimeline.map(t => Math.abs(t.delta)), 1), [deltaTimeline])
+
   useEffect(() => {
-    // Flush buffer every 200ms
     const flushInterval = setInterval(() => {
       if (tradeBufferRef.current.length > 0) {
+        const newIds = new Set(tradeBufferRef.current.map(t => t.id))
+        setNewTradeIds(newIds)
+        setTimeout(() => setNewTradeIds(new Set()), 600)
+
         setTrades(prev => {
           const next = [...tradeBufferRef.current, ...prev]
-          return next.slice(0, 500)
+          return next.slice(0, 300)
         })
         tradeBufferRef.current = []
       }
@@ -187,16 +303,16 @@ function App() {
 
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data)
-        const trade: Trade = {
-          id: `${msg.a}-${msg.T}`,
-          timestamp: msg.T,
-          price: parseFloat(msg.p),
-          quantity: parseFloat(msg.q),
-          isBuyerMaker: msg.m,
-        }
-        // Filter by size
-        if (trade.quantity * trade.price >= minSize) {
-          tradeBufferRef.current.unshift(trade)
+        const size = parseFloat(msg.q) * parseFloat(msg.p)
+        if (size >= minSize) {
+          tradeBufferRef.current.unshift({
+            id: `${msg.a}-${msg.T}`,
+            timestamp: msg.T,
+            price: parseFloat(msg.p),
+            quantity: parseFloat(msg.q),
+            isBuyerMaker: msg.m,
+            size,
+          })
         }
       }
 
@@ -204,20 +320,16 @@ function App() {
       ws.onclose = () => setTimeout(connect, 2000)
     }
 
-    // Load recent history
     const loadHistory = async () => {
       try {
-        const resp = await fetch('https://api.binance.com/api/v3/aggTrades?symbol=BTCUSDT&limit=200')
+        const resp = await fetch('https://api.binance.com/api/v3/aggTrades?symbol=BTCUSDT&limit=300')
         const data = await resp.json()
         const histTrades: Trade[] = data
           .filter((t: any) => parseFloat(t.q) * parseFloat(t.p) >= minSize)
-          .map((t: any) => ({
-            id: `${t.a}`,
-            timestamp: t.T,
-            price: parseFloat(t.p),
-            quantity: parseFloat(t.q),
-            isBuyerMaker: t.m,
-          }))
+          .map((t: any) => {
+            const size = parseFloat(t.q) * parseFloat(t.p)
+            return { id: `${t.a}`, timestamp: t.T, price: parseFloat(t.p), quantity: parseFloat(t.q), isBuyerMaker: t.m, size }
+          })
           .reverse()
         setTrades(histTrades)
       } catch (e) { console.error(e) }
@@ -232,59 +344,118 @@ function App() {
     }
   }, [minSize])
 
+  useEffect(() => {
+    if (autoScroll && listRef.current) {
+      listRef.current.scrollTop = 0
+    }
+  }, [trades, autoScroll])
+
   return (
     <Box minH="100vh" bg="#0B1418" p={3} display="flex" flexDirection="column" gap={3} fontFamily="mono">
+      <style>{`
+        @keyframes tradeFlash {
+          0% { background: rgba(255,159,10,0.3); }
+          100% { background: transparent; }
+        }
+        @keyframes pulseDot {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+        .live-dot { animation: pulseDot 1.5s infinite; }
+      `}</style>
 
       {/* Header */}
       <Flex bg="#141E24" border="1px solid #2a3840" borderRadius="8px" px={4} py={3} justify="space-between" align="center" flexWrap="wrap" gap={3}>
-        <HStack spacing={3}>
-          <Box w="32px" h="32px" borderRadius="8px" bg="#10A37F" display="flex" alignItems="center" justifyContent="center">
-            <Text fontSize="14px" color="#0B1418" fontWeight="900">C</Text>
+        <HStack spacing={4}>
+          <Box w="36px" h="36px" borderRadius="8px" bg="#10A37F" display="flex" alignItems="center" justifyContent="center" flexShrink={0}>
+            <Text fontSize="16px" color="#0B1418" fontWeight="900">C</Text>
           </Box>
-          <VStack align="start" spacing={0}>
-            <Text fontSize="13px" fontWeight="800" color="#f5f5f7" letterSpacing="0.04em">LARGE TRADES</Text>
-            <Text fontSize="10px" color="#6e6e73" fontFamily="mono">Binance real-time order flow</Text>
-          </VStack>
-        </HStack>
-
-        {/* Stats */}
-        <HStack spacing={8} wrap="wrap">
-          <VStack align="start" spacing={0}>
-            <Text fontSize="9px" color="#3a4550" fontWeight="600" letterSpacing="0.1em">BUYS 5M</Text>
-            <Text fontSize="20px" fontWeight="900" color="#10A37F" fontFamily="mono">{stats.buys}</Text>
-          </VStack>
-          <VStack align="start" spacing={0}>
-            <Text fontSize="9px" color="#3a4550" fontWeight="600" letterSpacing="0.1em">SELLS 5M</Text>
-            <Text fontSize="20px" fontWeight="900" color="#FF453A" fontFamily="mono">{stats.sells}</Text>
-          </VStack>
-          <VStack align="start" spacing={0}>
-            <Text fontSize="9px" color="#3a4550" fontWeight="600" letterSpacing="0.1em">BUY PRESSURE</Text>
-            <Box w="80px" h="6px" bg="#2a3840" borderRadius="3px" overflow="hidden">
-              <Box h="100%" w={`${stats.buyPct}%`} bg={stats.buyPct > 55 ? '#10A37F' : stats.buyPct < 45 ? '#FF453A' : '#FF9F0A'} transition="width 0.3s" />
-            </Box>
-            <Text fontSize="10px" color="#6e6e73" fontFamily="mono">{stats.buyPct.toFixed(0)}%</Text>
-          </VStack>
-          <VStack align="start" spacing={0}>
-            <Text fontSize="9px" color="#3a4550" fontWeight="600" letterSpacing="0.1em">FEED</Text>
+          <VStack align="start" spacing={1}>
             <HStack spacing={2}>
-              <Box w="7px" h="7px" borderRadius="50%" bg="#10A37F" boxShadow="0 0 6px rgba(16,163,127,0.5)" />
-              <Text fontSize="12px" fontWeight="800" color="#10A37F">LIVE</Text>
+              <Text fontSize="18px" fontWeight="900" color="#f5f5f7" letterSpacing="0.05em">BTC/USDT</Text>
+              <HStack spacing={1}>
+                <Box w="8px" h="8px" borderRadius="50%" bg="#10A37F" className="live-dot" boxShadow="0 0 8px rgba(16,163,127,0.6)" />
+                <Text fontSize="10px" color="#10A37F" fontWeight="700">LIVE</Text>
+              </HStack>
+            </HStack>
+            <HStack spacing={3}>
+              <Text fontSize="22px" fontWeight="900" color={priceColor} fontFamily="mono">
+                ${formatPrice(lastPrice)}
+              </Text>
+              <Text fontSize="13px" color={priceColor} fontFamily="mono" fontWeight="700">
+                {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(0)}
+              </Text>
+              <Text fontSize="12px" color={priceColor} fontFamily="mono">
+                ({priceChange >= 0 ? '+' : ''}{priceChangePct.toFixed(2)}%)
+              </Text>
             </HStack>
           </VStack>
         </HStack>
+
+        {/* Timeframe stats */}
+        <HStack spacing={6} wrap="wrap">
+          {([
+            { label: '1M', s: stats.m1 },
+            { label: '5M', s: stats.m5 },
+            { label: '15M', s: stats.m15 },
+          ] as const).map(({ label, s }) => (
+            <VStack key={label} align="start" spacing={1} minW="80px">
+              <Text fontSize="9px" color="#3a4550" fontWeight="600" letterSpacing="0.1em">{label}</Text>
+              <Flex gap={1} align="center">
+                <Text fontSize="14px" fontWeight="800" color="#10A37F">{s.buys}</Text>
+                <Text fontSize="10px" color="#3a4550">/</Text>
+                <Text fontSize="14px" fontWeight="800" color="#FF453A">{s.sells}</Text>
+              </Flex>
+              <Box w="80px" h="4px" bg="#2a3840" borderRadius="2px" overflow="hidden">
+                <Box h="100%" w={`${s.buyPct}%`} bg={s.buyPct > 55 ? '#10A37F' : s.buyPct < 45 ? '#FF453A' : '#FF9F0A'} transition="width 0.3s" />
+              </Box>
+              <Text fontSize="9px" color="#6e6e73" fontFamily="mono">
+                {s.buyPct.toFixed(0)}% buy
+              </Text>
+            </VStack>
+          ))}
+        </HStack>
       </Flex>
 
-      {/* Controls row */}
+      {/* Delta timeline */}
+      <Box bg="#141E24" border="1px solid #2a3840" borderRadius="8px" px={4} py={2}>
+        <Flex align="center" gap={2}>
+          <Text fontSize="9px" color="#3a4550" fontWeight="600" letterSpacing="0.1em" flexShrink={0}>DELTA</Text>
+          <Flex flex={1} align="center" gap={1}>
+            {deltaTimeline.map((b, i) => {
+              const pct = (b.delta / maxDelta) * 50
+              const isPos = b.delta >= 0
+              return (
+                <Box
+                  key={i}
+                  flex={1}
+                  h="20px"
+                  bg={isPos ? 'rgba(16,163,127,0.3)' : 'rgba(255,69,58,0.3)'}
+                  borderRadius="2px"
+                  position="relative"
+                  overflow="hidden"
+                >
+                  <Box
+                    position="absolute"
+                    bottom={isPos ? 0 : 'auto'}
+                    top={isPos ? 'auto' : 0}
+                    h={`${Math.abs(pct)}%`}
+                    w="100%"
+                    bg={isPos ? '#10A37F' : '#FF453A'}
+                    opacity={0.6 + Math.abs(pct) / 200}
+                    transition="height 0.3s"
+                  />
+                </Box>
+              )
+            })}
+          </Flex>
+        </Flex>
+      </Box>
+
+      {/* Controls */}
       <Flex bg="#141E24" border="1px solid #2a3840" borderRadius="8px" px={4} py={3} gap={4} align="center" flexWrap="wrap">
         <HStack spacing={2}>
-          <Box w="7px" h="7px" borderRadius="50%" bg="#FF9F0A" boxShadow="0 0 6px rgba(255,159,10,0.5)" />
-          <Text fontSize="11px" color="#FF9F0A" fontWeight="800" fontFamily="mono">BTC/USDT</Text>
-          <Text fontSize="10px" color="#3a4550" fontFamily="mono">Binance spot</Text>
-        </HStack>
-
-        {/* Min size filter */}
-        <HStack spacing={2}>
-          <Text fontSize="10px" color="#3a4550" fontWeight="600">MIN SIZE:</Text>
+          <Text fontSize="10px" color="#3a4550" fontWeight="600" letterSpacing="0.1em">MIN SIZE:</Text>
           {SIZE_FILTERS.map(f => (
             <Button
               key={f.value}
@@ -306,106 +477,167 @@ function App() {
           ))}
         </HStack>
 
-        <Text fontSize="10px" color="#3a4550">
-          {trades.length} trades shown
-        </Text>
+        <Box flex={1} />
+
+        <HStack spacing={3}>
+          <Text fontSize="10px" color="#3a4550" fontFamily="mono">{trades.length} trades</Text>
+          <Button
+            size="xs"
+            bg={autoScroll ? '#10A37F' : 'transparent'}
+            color={autoScroll ? '#0B1418' : '#6e6e73'}
+            fontWeight="700"
+            fontSize="10px"
+            fontFamily="mono"
+            px={2}
+            borderRadius="4px"
+            border="1px solid"
+            borderColor={autoScroll ? '#10A37F' : '#2a3840'}
+            onClick={() => setAutoScroll(!autoScroll)}
+          >
+            AUTO-SCROLL {autoScroll ? 'ON' : 'OFF'}
+          </Button>
+        </HStack>
       </Flex>
 
+      {/* Main layout */}
       <Flex gap={3} flex="1" direction={{ base: 'column', xl: 'row' }} minH={0}>
-        {/* Trades table */}
+        {/* Trades list */}
         <Box flex="1" minW={0} display="flex" flexDirection="column" bg="#141E24" border="1px solid #2a3840" borderRadius="8px" overflow="hidden">
-          <Flex px={4} py={3} borderBottom="1px solid #2a3840" justify="space-between" align="center">
-            <HStack spacing={3}>
-              <Text fontSize="14px" fontWeight="800" color="#f5f5f7" letterSpacing="0.05em">BTC/USDT</Text>
-              <Text fontSize="13px" color={priceColor} fontFamily="mono" fontWeight="700">
-                ${formatPrice(lastPrice)}
-              </Text>
-              {priceChangePct !== 0 && (
-                <Text fontSize="11px" color={priceColor} fontFamily="mono">
-                  {priceChange >= 0 ? '+' : ''}{priceChangePct.toFixed(2)}%
-                </Text>
-              )}
+          <Flex px={4} py={2} borderBottom="1px solid #2a3840" justify="space-between" align="center">
+            <HStack spacing={4}>
+              <Text fontSize="10px" color="#3a4550" fontWeight="600" letterSpacing="0.1em">ORDER FLOW</Text>
+              <HStack spacing={2}>
+                <Box w="6px" h="6px" borderRadius="50%" bg="#10A37F" />
+                <Text fontSize="9px" color="#10A37F" fontFamily="mono">BUY</Text>
+                <Box w="6px" h="6px" borderRadius="50%" bg="#FF453A" ml={2} />
+                <Text fontSize="9px" color="#FF453A" fontFamily="mono">SELL</Text>
+              </HStack>
             </HStack>
-            <Text fontSize="10px" color="#3a4550" fontFamily="mono">LAST 500 TRADES</Text>
+            <HStack spacing={2}>
+              <Box w="8px" h="8px" borderRadius="50%" bg="rgba(16,163,127,0.12)" border="1px solid rgba(16,163,127,0.4)" />
+              <Text fontSize="9px" color="#6e6e73" fontFamily="mono">WHALE</Text>
+              <Box w="8px" h="8px" borderRadius="50%" bg="rgba(255,159,10,0.15)" border="1px solid rgba(255,159,10,0.4)" ml={2} />
+              <Text fontSize="9px" color="#FF9F0A" fontFamily="mono">MEGA</Text>
+            </HStack>
           </Flex>
 
-          {/* Table */}
-          <Box flex="1" overflowY="auto" css={{ '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-track': { background: 'transparent' }, '&::-webkit-scrollbar-thumb': { background: '#2a3840', borderRadius: '2px' } }}>
-            <Table size="sm" variant="unstyled">
-              <Thead position="sticky" top={0} zIndex={1} bg="#0B1418">
-                <Tr borderBottom="1px solid #2a3840">
-                  <Th px={2} py={2} fontSize="9px" color="#3a4550" fontFamily="mono" fontWeight="600" letterSpacing="0.06em">TIME</Th>
-                  <Th px={2} py={2} fontSize="9px" color="#3a4550" fontFamily="mono" fontWeight="600" letterSpacing="0.06em">SIDE</Th>
-                  <Th px={2} py={2} fontSize="9px" color="#3a4550" fontFamily="mono" fontWeight="600" letterSpacing="0.06em" isNumeric>PRICE</Th>
-                  <Th px={2} py={2} fontSize="9px" color="#3a4550" fontFamily="mono" fontWeight="600" letterSpacing="0.06em" isNumeric>VALUE</Th>
-                  <Th px={2} py={2} fontSize="9px" color="#3a4550" fontFamily="mono" fontWeight="600" letterSpacing="0.06em" isNumeric>SIZE</Th>
-                  <Th px={2} py={2} fontSize="9px" color="#3a4550" fontFamily="mono" fontWeight="600" letterSpacing="0.06em"></Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {trades.map((trade, i) => (
-                  <TradeRow key={`${trade.id}-${i}`} trade={trade} />
-                ))}
-                {trades.length === 0 && (
-                  <Tr><Td colSpan={6} py={16} textAlign="center"><Text fontSize="12px" color="#3a4550">Loading trades...</Text></Td></Tr>
-                )}
-              </Tbody>
-            </Table>
+          <Box ref={listRef} flex="1" overflowY="auto" p={3} display="flex" flexDirection="column" gap={2} css={{ '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-track': { background: 'transparent' }, '&::-webkit-scrollbar-thumb': { background: '#2a3840', borderRadius: '2px' } }}>
+            {groups.map(group => (
+              <Box key={group.key}>
+                {/* Group header */}
+                <Flex align="center" gap={2} mb={2}>
+                  <Text fontSize="9px" color="#3a4550" fontFamily="mono" fontWeight="600" letterSpacing="0.08em">{group.label}</Text>
+                  <Box flex={1} h="1px" bg="#2a3840" />
+                  <Text fontSize="9px" color={group.netDelta >= 0 ? '#10A37F' : '#FF453A'} fontFamily="mono" fontWeight="700">
+                    {group.netDelta >= 0 ? '+' : ''}{formatSize(Math.abs(group.netDelta))}
+                    {group.netDelta >= 0 ? ' net buy' : ' net sell'}
+                  </Text>
+                </Flex>
+
+                {/* Trades in group */}
+                <Flex direction="column" gap={1.5}>
+                  {group.trades.map(trade => (
+                    <MegaTradeRow
+                      key={trade.id}
+                      trade={trade}
+                      isNew={newTradeIds.has(trade.id)}
+                    />
+                  ))}
+                </Flex>
+              </Box>
+            ))}
+            {trades.length === 0 && (
+              <Flex flex={1} align="center" justify="center">
+                <VStack spacing={3} py={8}>
+                  <Box w="40px" h="40px" borderRadius="50%" border="2px solid #2a3840" display="flex" alignItems="center" justifyContent="center">
+                    <Text fontSize="16px" color="#3a4550">⟳</Text>
+                  </Box>
+                  <Text fontSize="12px" color="#3a4550" fontFamily="mono">Loading order flow...</Text>
+                </VStack>
+              </Flex>
+            )}
           </Box>
         </Box>
 
-        {/* Right sidebar: chart + funding */}
-        <Flex direction="column" gap={3} w={{ base: '100%', xl: '340px' }} flexShrink={0}>
-          {/* Funding rate card */}
+        {/* Right sidebar */}
+        <Flex direction="column" gap={3} w={{ base: '100%', xl: '320px' }} flexShrink={0}>
+          {/* Funding rate */}
           <Box bg="#141E24" border="1px solid #2a3840" borderRadius="8px" px={4} py={3}>
-            <Text fontSize="10px" color="#3a4550" fontWeight="600" letterSpacing="0.1em" mb={3}>FUNDING RATE 8H</Text>
+            <Text fontSize="9px" color="#3a4550" fontWeight="600" letterSpacing="0.1em" mb={3}>FUNDING 8H</Text>
             <HStack spacing={6}>
               <VStack align="start" spacing={1}>
-                <Text fontSize="9px" color="#3a4550">BINANCE</Text>
-                <Text fontSize="22px" fontWeight="900" color={fundingColor} fontFamily="mono">
+                <Text fontSize="8px" color="#3a4550">RATE</Text>
+                <Text fontSize="20px" fontWeight="900" color={fundingColor} fontFamily="mono">
                   {funding >= 0 ? '+' : ''}{funding.toFixed(3)}%
                 </Text>
               </VStack>
               <VStack align="start" spacing={1}>
-                <Text fontSize="9px" color="#3a4550">ANNUALIZED</Text>
-                <Text fontSize="18px" fontWeight="700" color={fundingColor} fontFamily="mono">
-                  {funding >= 0 ? '+' : ''}{(funding * 3 * 365).toFixed(1)}%
+                <Text fontSize="8px" color="#3a4550">ANNUAL</Text>
+                <Text fontSize="16px" fontWeight="700" color={fundingColor} fontFamily="mono">
+                  {funding >= 0 ? '+' : ''}{(funding * 3 * 365).toFixed(0)}%
                 </Text>
               </VStack>
-              <Box flex="1" />
+              <Box flex={1} />
               <VStack align="end" spacing={1}>
-                <Text fontSize="9px" color="#3a4550">RISK</Text>
-                <Text fontSize="12px" fontWeight="700" color={funding > 0.15 ? '#FF453A' : funding > 0.05 ? '#FF9F0A' : '#10A37F'}>
-                  {funding > 0.15 ? 'HIGH' : funding > 0.05 ? 'MODERATE' : 'LOW'}
+                <Text fontSize="8px" color="#3a4550">RISK</Text>
+                <Text fontSize="12px" fontWeight="800" color={funding > 0.15 ? '#FF453A' : funding > 0.05 ? '#FF9F0A' : '#10A37F'}>
+                  {funding > 0.15 ? 'HIGH' : funding > 0.05 ? 'MED' : 'LOW'}
                 </Text>
               </VStack>
             </HStack>
           </Box>
 
-          {/* Mini chart */}
-          <Box flex="1" bg="#141E24" border="1px solid #2a3840" borderRadius="8px" overflow="hidden" minH="200px">
+          {/* 1m Chart */}
+          <Box flex="1" bg="#141E24" border="1px solid #2a3840" borderRadius="8px" overflow="hidden" minH="180px">
             <Flex px={4} py={2} borderBottom="1px solid #2a3840" justify="space-between" align="center">
-              <Text fontSize="10px" color="#3a4550" fontWeight="600" letterSpacing="0.1em">1M CHART</Text>
-              <Text fontSize="10px" color="#6e6e73" fontFamily="mono">BTC/USDT</Text>
+              <Text fontSize="9px" color="#3a4550" fontWeight="600" letterSpacing="0.1em">1M CHART</Text>
+              <Text fontSize="9px" color="#6e6e73" fontFamily="mono">BTC/USDT</Text>
             </Flex>
-            <Box h="calc(100% - 40px)">
+            <Box h="calc(100% - 36px)">
               <PriceMiniChart symbol="BTC" />
             </Box>
           </Box>
 
           {/* Volume bar */}
           <Box bg="#141E24" border="1px solid #2a3840" borderRadius="8px" px={4} py={3}>
-            <Text fontSize="10px" color="#3a4550" fontWeight="600" letterSpacing="0.1em" mb={3}>VOLUME 5M</Text>
-            <Flex gap={2} align="center">
-              <Box flex={stats.buyPct} h="24px" bg="rgba(16,163,127,0.3)" borderRadius="4px 0 0 4px" />
-              <Box flex={100 - stats.buyPct} h="24px" bg="rgba(255,69,58,0.3)" borderRadius="0 4px 4px 0" />
-            </Flex>
+            <Text fontSize="9px" color="#3a4550" fontWeight="600" letterSpacing="0.1em" mb={3}>VOLUME 5M</Text>
+            <Box h="28px" bg="#2a3840" borderRadius="4px" overflow="hidden">
+              <Flex h="100%">
+                <Box
+                  w={`${stats.m5.buyPct}%`}
+                  bg="rgba(16,163,127,0.4)"
+                  transition="width 0.3s"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  {stats.m5.buyPct > 30 && (
+                    <Text fontSize="9px" color="#10A37F" fontFamily="mono" fontWeight="700">
+                      BUY {stats.m5.buyPct.toFixed(0)}%
+                    </Text>
+                  )}
+                </Box>
+                <Box
+                  flex={1}
+                  bg="rgba(255,69,58,0.4)"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  {stats.m5.buyPct < 70 && (
+                    <Text fontSize="9px" color="#FF453A" fontFamily="mono" fontWeight="700">
+                      {(100 - stats.m5.buyPct).toFixed(0)}% SELL
+                    </Text>
+                  )}
+                </Box>
+              </Flex>
+            </Box>
             <HStack mt={2} justify="space-between">
-              <Text fontSize="10px" color="#10A37F" fontFamily="mono">
-                BUY ${formatSize(stats.buyVol)}
+              <Text fontSize="10px" color="#10A37F" fontFamily="mono" fontWeight="700">
+                BUY ${formatSize(stats.m5.buyVol)}
               </Text>
-              <Text fontSize="10px" color="#FF453A" fontFamily="mono">
-                SELL ${formatSize(stats.sellVol)}
+              <Text fontSize="10px" color="#FF453A" fontFamily="mono" fontWeight="700">
+                SELL ${formatSize(stats.m5.sellVol)}
               </Text>
             </HStack>
           </Box>
